@@ -37,6 +37,21 @@ export const createTodo = async (req, res) => {
 
 export const deleteTodo = async (req, res) => {
   try {
+    const todo = await TodoModel.find(req.params.id);
+    if (!todo) {
+      return res.status(404).json({
+        status: "fail",
+        message: "Todo not found",
+      });
+    }
+
+    if (todo.assignetUser !== req.user._id) {
+      return res.status(403).json({
+        status: "fail",
+        message: "You are not authorized to update this todo",
+      });
+    }
+
     await TodoModel.findByIdAndDelete(req.params.id);
 
     res.status(204).json({
@@ -54,6 +69,21 @@ export const deleteTodo = async (req, res) => {
 export const toggleStatus = async (req, res) => {
   try {
     const todo = await TodoModel.findById(req.params.id);
+
+    if (!todo) {
+      return res.status(404).json({
+        status: "fail",
+        message: "Todo not found",
+      });
+    }
+
+    if (todo.assignetUser !== req.user._id) {
+      return res.status(403).json({
+        status: "fail",
+        message: "You are not authorized to update this todo",
+      });
+    }
+
     todo.completed = !todo.completed;
     await todo.save();
 
@@ -75,6 +105,20 @@ export const updateTodo = async (req, res) => {
       title: req.body.title,
       state: req.body.state,
     });
+
+    if (!todo) {
+      return res.status(404).json({
+        status: "fail",
+        message: "Todo not found",
+      });
+    }
+
+    if (todo.assignetUser !== req.user._id) {
+      return res.status(403).json({
+        status: "fail",
+        message: "You are not authorized to update this todo",
+      });
+    }
 
     res.status(200).json({
       status: "success",
