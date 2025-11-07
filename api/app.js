@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import userRouter from "./routes/userRoutes.js";
+import todoRouter from "./routes/todoRoutes.js";
 import dayjs from "dayjs";
 
 const app = express();
@@ -17,6 +18,7 @@ app.use((req, res, next) => {
 });
 
 app.use("/api/user", userRouter);
+app.use("/api/todo", todoRouter);
 
 app.all("*", (req, res) => {
   res.status(404).json({

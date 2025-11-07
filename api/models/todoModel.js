@@ -6,11 +6,11 @@ const todoSchema = new mongoose.Schema({
     required: [true, "nameRequired"],
   },
   state: {
-    type: ["active", "completed"],
+    type: String,
     default: "active",
     required: [true, "stateRequired"],
   },
-  assignetUser: {
+  assignedUser: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: [true, "assignetUserRequired"],

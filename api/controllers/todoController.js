@@ -1,8 +1,8 @@
-import TodoModel from "../models/todoModel";
+import TodoModel from "../models/todoModel.js";
 
 export const getTodos = async (req, res) => {
   try {
-    const users = await TodoModel.find({ assignetUser: req.user._id });
+    const users = await TodoModel.find({ assignedUser: req.user._id });
 
     res.status(200).json({
       status: "success",
@@ -19,8 +19,8 @@ export const getTodos = async (req, res) => {
 export const createTodo = async (req, res) => {
   try {
     const newTodo = await TodoModel.create({
-      title: req.body.title,
-      assignetUser: req.user._id,
+      name: req.body.title,
+      assignedUser: req.user._id,
     });
 
     res.status(201).json({
@@ -37,7 +37,7 @@ export const createTodo = async (req, res) => {
 
 export const deleteTodo = async (req, res) => {
   try {
-    const todo = await TodoModel.find(req.params.id);
+    const todo = await TodoModel.findById(req.params.id);
     if (!todo) {
       return res.status(404).json({
         status: "fail",
@@ -45,7 +45,7 @@ export const deleteTodo = async (req, res) => {
       });
     }
 
-    if (todo.assignetUser !== req.user._id) {
+    if (todo.assignedUser.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         status: "fail",
         message: "You are not authorized to update this todo",
@@ -69,7 +69,7 @@ export const deleteTodo = async (req, res) => {
 export const toggleStatus = async (req, res) => {
   try {
     const todo = await TodoModel.findById(req.params.id);
-
+    console.log(todo);
     if (!todo) {
       return res.status(404).json({
         status: "fail",
@@ -77,14 +77,19 @@ export const toggleStatus = async (req, res) => {
       });
     }
 
-    if (todo.assignetUser !== req.user._id) {
+    if (todo.assignedUser.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         status: "fail",
         message: "You are not authorized to update this todo",
       });
     }
 
-    todo.completed = !todo.completed;
+    if (todo.state === "active") {
+      todo.state = "completed";
+    } else {
+      todo.state = "active";
+    }
+
     await todo.save();
 
     res.status(200).json({
