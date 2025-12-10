@@ -1,28 +1,41 @@
-"use client"
+import type React from "react";
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
-import { useAuth } from "@/components/auth-provider"
-import { useRouter, useParams } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { updateInvoice, getInvoiceById, type InvoiceStatus } from "@/lib/invoices"
-import { ArrowLeft, Save } from "lucide-react"
-import Link from "next/link"
-import { useToast } from "@/hooks/use-toast"
+import { useState, useEffect } from "react";
+import { useAuth } from "@/components/auth-provider";
+import { useNavigate, useParams, Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  updateInvoice,
+  getInvoiceById,
+  type InvoiceStatus,
+} from "@/lib/invoices";
+import { ArrowLeft, Save } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function EditInvoicePage() {
-  const { session } = useAuth()
-  const router = useRouter()
-  const params = useParams()
-  const { toast } = useToast()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+  const { session } = useAuth();
+  const navigate = useNavigate();
+  const params = useParams<{ id: string }>();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
     invoiceNumber: "",
@@ -31,11 +44,11 @@ export default function EditInvoicePage() {
     issueDate: "",
     dueDate: "",
     status: "PENDING" as InvoiceStatus,
-  })
+  });
 
   useEffect(() => {
     if (session && params.id) {
-      const invoice = getInvoiceById(session.user.id, params.id as string)
+      const invoice = getInvoiceById(session.user.id, params.id);
       if (invoice) {
         setFormData({
           invoiceNumber: invoice.invoiceNumber,
@@ -44,52 +57,52 @@ export default function EditInvoicePage() {
           issueDate: invoice.issueDate,
           dueDate: invoice.dueDate,
           status: invoice.status,
-        })
+        });
       } else {
-        setError("Faktura nie została znaleziona")
+        setError("Faktura nie została znaleziona");
       }
     }
-  }, [session, params.id])
+  }, [session, params.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!session || !params.id) {
-      router.push("/login")
-      return
+      navigate("/login");
+      return;
     }
 
-    setError("")
-    setLoading(true)
+    setError("");
+    setLoading(true);
 
-    const result = await updateInvoice(session.user.id, params.id as string, {
+    const result = await updateInvoice(session.user.id, params.id, {
       invoiceNumber: formData.invoiceNumber,
       amount: Number.parseFloat(formData.amount),
       contractor: formData.contractor,
       issueDate: formData.issueDate,
       dueDate: formData.dueDate,
       status: formData.status,
-    })
+    });
 
     if (result.success) {
       toast({
         title: "Faktura zaktualizowana",
         description: "Zmiany zostały pomyślnie zapisane",
-      })
-      router.push("/dashboard")
+      });
+      navigate("/dashboard");
     } else {
-      setError(result.error || "Wystąpił błąd podczas aktualizacji faktury")
+      setError(result.error || "Wystąpił błąd podczas aktualizacji faktury");
     }
 
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4">
           <Button variant="ghost" asChild>
-            <Link href="/dashboard">
+            <Link to="/dashboard">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Powrót do dashboardu
             </Link>
@@ -117,7 +130,9 @@ export default function EditInvoicePage() {
                   id="invoiceNumber"
                   placeholder="FV/2025/001"
                   value={formData.invoiceNumber}
-                  onChange={(e) => setFormData({ ...formData, invoiceNumber: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, invoiceNumber: e.target.value })
+                  }
                   required
                   disabled={loading}
                 />
@@ -129,7 +144,9 @@ export default function EditInvoicePage() {
                   id="contractor"
                   placeholder="Nazwa firmy lub osoby"
                   value={formData.contractor}
-                  onChange={(e) => setFormData({ ...formData, contractor: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, contractor: e.target.value })
+                  }
                   required
                   disabled={loading}
                 />
@@ -144,7 +161,9 @@ export default function EditInvoicePage() {
                   min="0"
                   placeholder="1000.00"
                   value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, amount: e.target.value })
+                  }
                   required
                   disabled={loading}
                 />
@@ -157,7 +176,9 @@ export default function EditInvoicePage() {
                     id="issueDate"
                     type="date"
                     value={formData.issueDate}
-                    onChange={(e) => setFormData({ ...formData, issueDate: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, issueDate: e.target.value })
+                    }
                     required
                     disabled={loading}
                   />
@@ -169,7 +190,9 @@ export default function EditInvoicePage() {
                     id="dueDate"
                     type="date"
                     value={formData.dueDate}
-                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, dueDate: e.target.value })
+                    }
                     required
                     disabled={loading}
                   />
@@ -180,7 +203,9 @@ export default function EditInvoicePage() {
                 <Label htmlFor="status">Status płatności *</Label>
                 <Select
                   value={formData.status}
-                  onValueChange={(value: InvoiceStatus) => setFormData({ ...formData, status: value })}
+                  onValueChange={(value: InvoiceStatus) =>
+                    setFormData({ ...formData, status: value })
+                  }
                   disabled={loading}
                 >
                   <SelectTrigger>
@@ -206,7 +231,7 @@ export default function EditInvoicePage() {
                   )}
                 </Button>
                 <Button type="button" variant="outline" asChild>
-                  <Link href="/dashboard">Anuluj</Link>
+                  <Link to="/dashboard">Anuluj</Link>
                 </Button>
               </div>
             </form>
@@ -214,5 +239,5 @@ export default function EditInvoicePage() {
         </Card>
       </main>
     </div>
-  )
+  );
 }

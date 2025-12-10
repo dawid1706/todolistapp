@@ -1,43 +1,47 @@
-"use client"
+import type React from "react";
 
-import type React from "react"
-
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { login } from "@/lib/auth"
-import { useAuth } from "@/components/auth-provider"
-import Link from "next/link"
-import { FileText, Lock } from "lucide-react"
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { login } from "@/lib/auth";
+import { useAuth } from "@/components/auth-provider";
+import { FileText, Lock } from "lucide-react";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
-  const { refreshSession } = useAuth()
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { refreshSession } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setLoading(true)
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
-    const result = await login(email, password)
+    const result = await login(email, password);
 
     if (result.success) {
-      refreshSession()
-      router.push("/dashboard")
+      refreshSession();
+      navigate("/dashboard");
     } else {
-      setError(result.error || "Wystąpił błąd podczas logowania")
+      setError(result.error || "Wystąpił błąd podczas logowania");
     }
 
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
@@ -49,7 +53,9 @@ export default function LoginPage() {
             </div>
           </div>
           <h1 className="text-3xl font-bold text-balance">Invoice Manager</h1>
-          <p className="text-muted-foreground mt-2">Bezpieczne zarządzanie fakturami</p>
+          <p className="text-muted-foreground mt-2">
+            Bezpieczne zarządzanie fakturami
+          </p>
         </div>
 
         <Card className="border-border">
@@ -108,7 +114,7 @@ export default function LoginPage() {
 
               <div className="text-sm text-center text-muted-foreground">
                 Nie masz konta?{" "}
-                <Link href="/register" className="text-primary hover:underline">
+                <Link to="/register" className="text-primary hover:underline">
                   Zarejestruj się
                 </Link>
               </div>
@@ -117,5 +123,5 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

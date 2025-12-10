@@ -1,14 +1,33 @@
-"use client"
-
-import { useEffect, useState } from "react"
-import { useAuth } from "@/components/auth-provider"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { getInvoices, type Invoice, type InvoiceStatus, deleteInvoice } from "@/lib/invoices"
-import { FileText, Plus, LogOut, Clock, CheckCircle2, AlertCircle, Pencil, Trash2, Download, Bell } from "lucide-react"
-import Link from "next/link"
+import { useEffect, useState } from "react";
+import { useAuth } from "@/components/auth-provider";
+import { useNavigate, Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  getInvoices,
+  type Invoice,
+  type InvoiceStatus,
+  deleteInvoice,
+} from "@/lib/invoices";
+import {
+  FileText,
+  Plus,
+  LogOut,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Pencil,
+  Trash2,
+  Download,
+  Bell,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,80 +37,86 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { useToast } from "@/hooks/use-toast"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { MoreVertical } from "lucide-react"
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreVertical } from "lucide-react";
 
 export default function DashboardPage() {
-  const { session, loading, logout } = useAuth()
-  const router = useRouter()
-  const [invoices, setInvoices] = useState<Invoice[]>([])
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null)
-  const { toast } = useToast()
+  const { session, loading, logout } = useAuth();
+  const navigate = useNavigate();
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!loading && !session) {
-      router.push("/login")
+      navigate("/login");
     }
-  }, [session, loading, router])
+  }, [session, loading, navigate]);
 
   useEffect(() => {
     if (session) {
-      loadInvoices()
+      loadInvoices();
     }
-  }, [session])
+  }, [session]);
 
   const loadInvoices = () => {
     if (session) {
-      const userInvoices = getInvoices(session.user.id)
-      setInvoices(userInvoices)
+      const userInvoices = getInvoices(session.user.id);
+      setInvoices(userInvoices);
     }
-  }
+  };
 
   const handleDeleteClick = (invoiceId: string) => {
-    setInvoiceToDelete(invoiceId)
-    setDeleteDialogOpen(true)
-  }
+    setInvoiceToDelete(invoiceId);
+    setDeleteDialogOpen(true);
+  };
 
   const handleDeleteConfirm = async () => {
     if (invoiceToDelete && session) {
-      const result = await deleteInvoice(session.user.id, invoiceToDelete)
+      const result = await deleteInvoice(session.user.id, invoiceToDelete);
       if (result.success) {
         toast({
           title: "Faktura usunięta",
           description: "Faktura została pomyślnie usunięta",
-        })
-        loadInvoices()
+        });
+        loadInvoices();
       } else {
         toast({
           title: "Błąd",
           description: result.error || "Nie udało się usunąć faktury",
           variant: "destructive",
-        })
+        });
       }
     }
-    setDeleteDialogOpen(false)
-    setInvoiceToDelete(null)
-  }
+    setDeleteDialogOpen(false);
+    setInvoiceToDelete(null);
+  };
 
   const handleDownload = (invoice: Invoice) => {
     if (invoice.fileData) {
-      const link = document.createElement("a")
-      link.href = invoice.fileData
-      link.download = invoice.fileName || `faktura_${invoice.invoiceNumber}.pdf`
-      link.click()
+      const link = document.createElement("a");
+      link.href = invoice.fileData;
+      link.download =
+        invoice.fileName || `faktura_${invoice.invoiceNumber}.pdf`;
+      link.click();
 
       toast({
         title: "Pobieranie pliku",
         description: "Faktura została pobrana",
-      })
+      });
     }
-  }
+  };
 
   if (loading || !session) {
-    return null
+    return null;
   }
 
   const stats = {
@@ -100,23 +125,35 @@ export default function DashboardPage() {
     paid: invoices.filter((inv) => inv.status === "PAID").length,
     overdue: invoices.filter((inv) => inv.status === "OVERDUE").length,
     totalAmount: invoices.reduce((sum, inv) => sum + inv.amount, 0),
-  }
+  };
 
   const getStatusBadge = (status: InvoiceStatus) => {
     const variants = {
-      PENDING: { label: "Oczekująca", variant: "secondary" as const, icon: Clock },
-      PAID: { label: "Zapłacona", variant: "default" as const, icon: CheckCircle2 },
-      OVERDUE: { label: "Zaległa", variant: "destructive" as const, icon: AlertCircle },
-    }
-    const config = variants[status]
-    const Icon = config.icon
+      PENDING: {
+        label: "Oczekująca",
+        variant: "secondary" as const,
+        icon: Clock,
+      },
+      PAID: {
+        label: "Zapłacona",
+        variant: "default" as const,
+        icon: CheckCircle2,
+      },
+      OVERDUE: {
+        label: "Zaległa",
+        variant: "destructive" as const,
+        icon: AlertCircle,
+      },
+    };
+    const config = variants[status];
+    const Icon = config.icon;
     return (
       <Badge variant={config.variant} className="gap-1">
         <Icon className="h-3 w-3" />
         {config.label}
       </Badge>
-    )
-  }
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -130,12 +167,14 @@ export default function DashboardPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold">Invoice Manager</h1>
-                <p className="text-sm text-muted-foreground">Witaj, {session.user.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  Witaj, {session.user.name}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" asChild>
-                <Link href="/dashboard/notifications">
+                <Link to="/dashboard/notifications">
                   <Bell className="h-4 w-4 mr-2" />
                   Powiadomienia
                 </Link>
@@ -181,7 +220,9 @@ export default function DashboardPage() {
           <Card>
             <CardHeader className="pb-3">
               <CardDescription>Zapłacone</CardDescription>
-              <CardTitle className="text-3xl text-accent">{stats.paid}</CardTitle>
+              <CardTitle className="text-3xl text-accent">
+                {stats.paid}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -194,7 +235,9 @@ export default function DashboardPage() {
           <Card>
             <CardHeader className="pb-3">
               <CardDescription>Zaległe</CardDescription>
-              <CardTitle className="text-3xl text-destructive">{stats.overdue}</CardTitle>
+              <CardTitle className="text-3xl text-destructive">
+                {stats.overdue}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -214,7 +257,7 @@ export default function DashboardPage() {
                 <CardDescription>Zarządzaj swoimi fakturami</CardDescription>
               </div>
               <Button asChild>
-                <Link href="/dashboard/invoices/new">
+                <Link to="/dashboard/invoices/new">
                   <Plus className="h-4 w-4 mr-2" />
                   Dodaj fakturę
                 </Link>
@@ -226,9 +269,11 @@ export default function DashboardPage() {
               <div className="text-center py-12">
                 <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">Brak faktur</h3>
-                <p className="text-muted-foreground mb-4">Rozpocznij dodając swoją pierwszą fakturę</p>
+                <p className="text-muted-foreground mb-4">
+                  Rozpocznij dodając swoją pierwszą fakturę
+                </p>
                 <Button asChild>
-                  <Link href="/dashboard/invoices/new">
+                  <Link to="/dashboard/invoices/new">
                     <Plus className="h-4 w-4 mr-2" />
                     Dodaj fakturę
                   </Link>
@@ -243,16 +288,22 @@ export default function DashboardPage() {
                   >
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">Numer faktury</p>
+                        <p className="text-sm text-muted-foreground">
+                          Numer faktury
+                        </p>
                         <p className="font-semibold">{invoice.invoiceNumber}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Kontrahent</p>
+                        <p className="text-sm text-muted-foreground">
+                          Kontrahent
+                        </p>
                         <p className="font-medium">{invoice.contractor}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Kwota</p>
-                        <p className="font-semibold text-accent">{invoice.amount.toFixed(2)} PLN</p>
+                        <p className="font-semibold text-accent">
+                          {invoice.amount.toFixed(2)} PLN
+                        </p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Status</p>
@@ -261,7 +312,11 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-2 ml-4">
                       {invoice.fileData && (
-                        <Button variant="ghost" size="sm" onClick={() => handleDownload(invoice)}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownload(invoice)}
+                        >
                           <Download className="h-4 w-4" />
                         </Button>
                       )}
@@ -273,7 +328,7 @@ export default function DashboardPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/invoices/${invoice.id}`}>
+                            <Link to={`/dashboard/invoices/${invoice.id}`}>
                               <Pencil className="h-4 w-4 mr-2" />
                               Edytuj
                             </Link>
@@ -299,9 +354,12 @@ export default function DashboardPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Czy na pewno chcesz usunąć tę fakturę?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Czy na pewno chcesz usunąć tę fakturę?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Ta operacja jest nieodwracalna. Faktura oraz powiązany plik zostaną trwale usunięte.
+              Ta operacja jest nieodwracalna. Faktura oraz powiązany plik
+              zostaną trwale usunięte.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -316,5 +374,5 @@ export default function DashboardPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

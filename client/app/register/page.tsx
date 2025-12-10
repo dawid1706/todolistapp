@@ -1,51 +1,55 @@
-"use client"
+import type React from "react";
 
-import type React from "react"
-
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { register } from "@/lib/auth"
-import { useAuth } from "@/components/auth-provider"
-import Link from "next/link"
-import { FileText, UserPlus } from "lucide-react"
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { register } from "@/lib/auth";
+import { useAuth } from "@/components/auth-provider";
+import { FileText, UserPlus } from "lucide-react";
 
 export default function RegisterPage() {
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
-  const { refreshSession } = useAuth()
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { refreshSession } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
+    e.preventDefault();
+    setError("");
 
     if (password !== confirmPassword) {
-      setError("Hasła nie są zgodne")
-      return
+      setError("Hasła nie są zgodne");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
-    const result = await register(email, password, name)
+    const result = await register(email, password, name);
 
     if (result.success) {
-      refreshSession()
-      router.push("/dashboard")
+      refreshSession();
+      navigate("/dashboard");
     } else {
-      setError(result.error || "Wystąpił błąd podczas rejestracji")
+      setError(result.error || "Wystąpił błąd podczas rejestracji");
     }
 
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
@@ -57,7 +61,9 @@ export default function RegisterPage() {
             </div>
           </div>
           <h1 className="text-3xl font-bold text-balance">Invoice Manager</h1>
-          <p className="text-muted-foreground mt-2">Bezpieczne zarządzanie fakturami</p>
+          <p className="text-muted-foreground mt-2">
+            Bezpieczne zarządzanie fakturami
+          </p>
         </div>
 
         <Card className="border-border">
@@ -110,7 +116,9 @@ export default function RegisterPage() {
                   required
                   disabled={loading}
                 />
-                <p className="text-xs text-muted-foreground">Min. 8 znaków, wielka litera i cyfra</p>
+                <p className="text-xs text-muted-foreground">
+                  Min. 8 znaków, wielka litera i cyfra
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -143,7 +151,7 @@ export default function RegisterPage() {
 
               <div className="text-sm text-center text-muted-foreground">
                 Masz już konto?{" "}
-                <Link href="/login" className="text-primary hover:underline">
+                <Link to="/login" className="text-primary hover:underline">
                   Zaloguj się
                 </Link>
               </div>
@@ -152,5 +160,5 @@ export default function RegisterPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
