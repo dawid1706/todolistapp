@@ -1,6 +1,7 @@
 import InvoiceModel from "../models/invoiceModel.js";
 import { Storage } from "@google-cloud/storage";
 import multer from "multer";
+import { sendNotificationsEmail } from "../utils/email.js";
 
 const storage = new Storage();
 
@@ -228,4 +229,44 @@ export const updateInvoice = async (req, res) => {
       message: err.message,
     });
   }
+};
+export const sendNotifications = async (req, res) => {
+  const invoices = await InvoiceModel.find({
+    dueDate: { $lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
+    status: "PENDING",
+  }).populate("owner");
+
+  const groupedInvoices = invoices.reduce((acc, invoice) => {
+    if (!invoice.owner) {
+      console.warn(
+        `Faktura ${invoice.invoiceNumber} nie ma przypisanego właściciela.`
+      );
+      return acc;
+    }
+
+    const ownerId = invoice.owner._id.toString();
+    if (!acc[ownerId]) {
+      acc[ownerId] = {
+        user: {
+          id: invoice.owner._id,
+          name: invoice.owner.name,
+          email: invoice.owner.email,
+        },
+        invoices: [],
+      };
+    }
+    acc[ownerId].invoices.push(invoice);
+    return acc;
+  }, {});
+
+  for (const ownerId in groupedInvoices) {
+    const { user, invoices } = groupedInvoices[ownerId];
+    const invoiceNumbers = invoices.map((inv) => inv.invoiceNumber).join(", ");
+    sendNotificationsEmail(user.email, invoiceNumbers);
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Notifications sent (simulated).",
+  });
 };

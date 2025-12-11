@@ -7,6 +7,7 @@ import {
   updateInvoice,
   getDownloadUrl,
   upload,
+  sendNotifications,
 } from "../controllers/invoiceController.js";
 
 const router = express.Router();
@@ -16,5 +17,6 @@ router.get("/:id/download", authGuard, getDownloadUrl);
 router.post("/create", authGuard, upload.single("file"), createInvoice);
 router.delete("/:id", authGuard, deleteInvoice);
 router.put("/:id", authGuard, updateInvoice);
+router.get("/corn", sendNotifications);
 
 export default router;
