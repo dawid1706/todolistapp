@@ -28,11 +28,14 @@ import {
 import { ArrowLeft, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+import { useAuth } from "@/components/auth-provider";
+
 export default function EditInvoicePage() {
   const navigate = useNavigate();
   const params = useParams<{ id: string }>();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const { session } = useAuth();
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
@@ -44,56 +47,61 @@ export default function EditInvoicePage() {
     status: "PENDING" as InvoiceStatus,
   });
 
-  // useEffect(() => {
-  //   if (session && params.id) {
-  //     const invoice = getInvoiceById(session.user.id, params.id);
-  //     if (invoice) {
-  //       setFormData({
-  //         invoiceNumber: invoice.invoiceNumber,
-  //         amount: invoice.amount.toString(),
-  //         contractor: invoice.contractor,
-  //         issueDate: invoice.issueDate,
-  //         dueDate: invoice.dueDate,
-  //         status: invoice.status,
-  //       });
-  //     } else {
-  //       setError("Faktura nie została znaleziona");
-  //     }
-  //   }
-  // }, [session, params.id]);
+  useEffect(() => {
+    const fetchInvoice = async () => {
+      if (session && params.id) {
+        setLoading(true);
+        const invoice = await getInvoiceById(session.user.id, params.id);
+        if (invoice) {
+          setFormData({
+            invoiceNumber: invoice.invoiceNumber,
+            amount: invoice.amount.toString(),
+            contractor: invoice.contractor,
+            issueDate: invoice.issueDate,
+            dueDate: invoice.dueDate,
+            status: invoice.status,
+          });
+        } else {
+          setError("Faktura nie została znaleziona");
+        }
+        setLoading(false);
+      }
+    };
+    fetchInvoice();
+  }, [session, params.id]);
 
-  // const handleSubmit = async (e: React.FormEvent) => {
-  //   e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  //   if (!session || !params.id) {
-  //     navigate("/login");
-  //     return;
-  //   }
+    if (!session || !params.id) {
+      navigate("/login");
+      return;
+    }
 
-  //   setError("");
-  //   setLoading(true);
+    setError("");
+    setLoading(true);
 
-  //   const result = await updateInvoice(session.user.id, params.id, {
-  //     invoiceNumber: formData.invoiceNumber,
-  //     amount: Number.parseFloat(formData.amount),
-  //     contractor: formData.contractor,
-  //     issueDate: formData.issueDate,
-  //     dueDate: formData.dueDate,
-  //     status: formData.status,
-  //   });
+    const result = await updateInvoice(session.user.id, params.id, {
+      invoiceNumber: formData.invoiceNumber,
+      amount: Number.parseFloat(formData.amount),
+      contractor: formData.contractor,
+      issueDate: formData.issueDate,
+      dueDate: formData.dueDate,
+      status: formData.status,
+    });
 
-  //   if (result.success) {
-  //     toast({
-  //       title: "Faktura zaktualizowana",
-  //       description: "Zmiany zostały pomyślnie zapisane",
-  //     });
-  //     navigate("/dashboard");
-  //   } else {
-  //     setError(result.error || "Wystąpił błąd podczas aktualizacji faktury");
-  //   }
+    if (result.success) {
+      toast({
+        title: "Faktura zaktualizowana",
+        description: "Zmiany zostały pomyślnie zapisane",
+      });
+      navigate("/dashboard");
+    } else {
+      setError(result.error || "Wystąpił błąd podczas aktualizacji faktury");
+    }
 
-  //   setLoading(false);
-  // };
+    setLoading(false);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -115,7 +123,7 @@ export default function EditInvoicePage() {
             <CardDescription>Zaktualizuj dane faktury</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={() => false} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>

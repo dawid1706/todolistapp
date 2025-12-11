@@ -22,7 +22,10 @@ export const useLogin = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (
+    email: string,
+    password: string
+  ): Promise<LoginResponse | null> => {
     setIsLoading(true);
     setError(null);
 
@@ -39,19 +42,18 @@ export const useLogin = () => {
 
       if (!response.ok) {
         setError(json.message || "Wystąpił błąd podczas logowania");
-        return false;
+        return null;
       }
 
       const data = json as LoginResponse;
 
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("session", JSON.stringify(data));
 
-      return true;
+      return data;
     } catch (err) {
       setError("Błąd połączenia z serwerem");
       console.error(err);
-      return false;
+      return null;
     } finally {
       setIsLoading(false);
     }

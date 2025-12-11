@@ -1,4 +1,6 @@
 // Invoice management library
+const API_BASE_URL = "http://localhost:3001/api/invoices";
+
 export type InvoiceStatus = "PENDING" | "PAID" | "OVERDUE";
 
 export interface Invoice {
@@ -10,57 +12,54 @@ export interface Invoice {
   issueDate: string;
   dueDate: string;
   status: InvoiceStatus;
-  fileName?: string;
-  fileBlobUrl?: string; // Blob URL for file access
+  filePath?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-const INVOICES_KEY = "invoice_manager_invoices";
-const BLOBS_KEY = "invoice_manager_blobs";
+const getAuthToken = (): string | null => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("token");
+};
 
-function saveBlobToStorage(invoiceId: string, blob: Blob): string {
-  const blobUrl = URL.createObjectURL(blob);
-  const blobs = getBlobsFromStorage();
-  blobs[invoiceId] = blobUrl;
-  localStorage.setItem(BLOBS_KEY, JSON.stringify(blobs));
-  return blobUrl;
-}
+const mapBackendToFrontend = (invoice: any): Invoice => ({
+  id: invoice._id,
+  userId: invoice.user,
+  invoiceNumber: invoice.invoiceNumber,
+  amount: invoice.amount,
+  contractor: invoice.contractor,
+  issueDate: new Date(invoice.issueDate).toISOString().split("T")[0],
+  dueDate: new Date(invoice.dueDate).toISOString().split("T")[0],
+  status: invoice.status,
+  filePath: invoice.filePath,
+  createdAt: invoice.createdAt,
+  updatedAt: invoice.updatedAt,
+});
 
-function getBlobsFromStorage(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const data = localStorage.getItem(BLOBS_KEY);
-  return data ? JSON.parse(data) : {};
-}
-
-function deleteBlobFromStorage(invoiceId: string) {
-  const blobs = getBlobsFromStorage();
-  const blobUrl = blobs[invoiceId];
-  if (blobUrl) {
-    URL.revokeObjectURL(blobUrl);
-    delete blobs[invoiceId];
-    localStorage.setItem(BLOBS_KEY, JSON.stringify(blobs));
+export async function getInvoices(userId: string): Promise<Invoice[]> {
+  const token = getAuthToken();
+  if (!token) {
+    console.error("No auth token found");
+    return [];
   }
-}
 
-export function getInvoices(userId: string): Invoice[] {
-  if (typeof window === "undefined") return [];
-  const data = localStorage.getItem(INVOICES_KEY);
-  if (!data) return [];
+  try {
+    const response = await fetch(API_BASE_URL, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-  const allInvoices: Invoice[] = JSON.parse(data);
-  return allInvoices.filter((inv) => inv.userId === userId);
-}
+    if (!response.ok) {
+      throw new Error("Failed to fetch invoices");
+    }
 
-function getAllInvoices(): Invoice[] {
-  if (typeof window === "undefined") return [];
-  const data = localStorage.getItem(INVOICES_KEY);
-  if (!data) return [];
-  return JSON.parse(data);
-}
-
-function saveInvoices(invoices: Invoice[]) {
-  localStorage.setItem(INVOICES_KEY, JSON.stringify(invoices));
+    const data = await response.json();
+    return data.content.map(mapBackendToFrontend);
+  } catch (error) {
+    console.error("Error fetching invoices:", error);
+    return [];
+  }
 }
 
 export async function createInvoice(
@@ -74,58 +73,39 @@ export async function createInvoice(
     file?: File;
   }
 ): Promise<{ success: boolean; error?: string; invoice?: Invoice }> {
+  const token = getAuthToken();
+  if (!token) {
+    return { success: false, error: "Brak autoryzacji" };
+  }
+
   try {
-    const allInvoices = getAllInvoices();
-
-    // Check for duplicate invoice number
-    const duplicate = allInvoices.find(
-      (inv) => inv.invoiceNumber === data.invoiceNumber && inv.userId === userId
-    );
-
-    if (duplicate) {
-      return { success: false, error: "Faktura o tym numerze już istnieje" };
-    }
-
-    let fileName: string | undefined;
-    let fileBlobUrl: string | undefined;
-
+    const formData = new FormData();
+    formData.append("invoiceNumber", data.invoiceNumber);
+    formData.append("amount", data.amount.toString());
+    formData.append("contractor", data.contractor);
+    formData.append("issueDate", data.issueDate);
+    formData.append("dueDate", data.dueDate);
     if (data.file) {
-      fileName = data.file.name;
-      // Create invoice first to get ID for blob storage
-      const tempId = crypto.randomUUID();
-      fileBlobUrl = saveBlobToStorage(tempId, data.file);
+      formData.append("file", data.file);
     }
 
-    // Determine initial status based on due date
-    const dueDate = new Date(data.dueDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    let status: InvoiceStatus = "PENDING";
+    const response = await fetch(`${API_BASE_URL}/create`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
 
-    if (dueDate < today) {
-      status = "OVERDUE";
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: result.message || "Wystąpił błąd" };
     }
 
-    const invoice: Invoice = {
-      id: crypto.randomUUID(),
-      userId,
-      invoiceNumber: data.invoiceNumber,
-      amount: data.amount,
-      contractor: data.contractor,
-      issueDate: data.issueDate,
-      dueDate: data.dueDate,
-      status,
-      fileName,
-      fileBlobUrl,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    allInvoices.push(invoice);
-    saveInvoices(allInvoices);
-
-    return { success: true, invoice };
+    return { success: true, invoice: mapBackendToFrontend(result.content) };
   } catch (error) {
+    console.error(error);
     return { success: false, error: "Wystąpił nieoczekiwany błąd" };
   }
 }
@@ -142,65 +122,104 @@ export async function updateInvoice(
     status: InvoiceStatus;
   }>
 ): Promise<{ success: boolean; error?: string; invoice?: Invoice }> {
-  const allInvoices = getAllInvoices();
-  const index = allInvoices.findIndex(
-    (inv) => inv.id === invoiceId && inv.userId === userId
-  );
-
-  if (index === -1) {
-    return { success: false, error: "Faktura nie została znaleziona" };
+  const token = getAuthToken();
+  if (!token) {
+    return { success: false, error: "Brak autoryzacji" };
   }
 
-  const invoice = allInvoices[index];
+  try {
+    const response = await fetch(`${API_BASE_URL}/${invoiceId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
 
-  // Update fields
-  const updated: Invoice = {
-    ...invoice,
-    ...data,
-    updatedAt: new Date().toISOString(),
-  };
+    const result = await response.json();
 
-  allInvoices[index] = updated;
-  saveInvoices(allInvoices);
+    if (!response.ok) {
+      return { success: false, error: result.message || "Wystąpił błąd" };
+    }
 
-  return { success: true, invoice: updated };
+    return { success: true, invoice: mapBackendToFrontend(result.invoice) };
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: "Wystąpił nieoczekiwany błąd" };
+  }
 }
 
 export async function deleteInvoice(
   userId: string,
   invoiceId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const allInvoices = getAllInvoices();
-  const index = allInvoices.findIndex(
-    (inv) => inv.id === invoiceId && inv.userId === userId
-  );
-
-  if (index === -1) {
-    return { success: false, error: "Faktura nie została znaleziona" };
+  const token = getAuthToken();
+  if (!token) {
+    return { success: false, error: "Brak autoryzacji" };
   }
 
-  deleteBlobFromStorage(invoiceId);
+  try {
+    const response = await fetch(`${API_BASE_URL}/${invoiceId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-  allInvoices.splice(index, 1);
-  saveInvoices(allInvoices);
+    if (!response.ok) {
+      const result = await response.json();
+      return { success: false, error: result.message || "Wystąpił błąd" };
+    }
 
-  return { success: true };
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: "Wystąpił nieoczekiwany błąd" };
+  }
 }
 
-export function getInvoiceById(
+export async function getInvoiceById(
   userId: string,
   invoiceId: string
-): Invoice | null {
-  const invoices = getInvoices(userId);
+): Promise<Invoice | null> {
+  const invoices = await getInvoices(userId); // This is inefficient, but works for now.
   return invoices.find((inv) => inv.id === invoiceId) || null;
 }
 
-// Check for upcoming due dates (for notifications)
-export function getUpcomingDueInvoices(
+export async function getInvoiceDownloadUrl(invoiceId: string): Promise<string | null> {
+  const token = getAuthToken();
+  if (!token) {
+    console.error("No auth token found");
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/${invoiceId}/download`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to get download URL");
+    }
+
+    const data = await response.json();
+    return data.url;
+  } catch (error) {
+    console.error("Error fetching download URL:", error);
+    return null;
+  }
+}
+
+// Check for upcoming due dates (for notifications) - This logic remains client-side
+export async function getUpcomingDueInvoices(
   userId: string,
   daysAhead = 7
-): Invoice[] {
-  const invoices = getInvoices(userId);
+): Promise<Invoice[]> {
+  const invoices = await getInvoices(userId);
   const today = new Date();
   const futureDate = new Date();
   futureDate.setDate(today.getDate() + daysAhead);

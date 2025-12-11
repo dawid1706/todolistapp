@@ -21,25 +21,17 @@ import { useAuth } from "@/components/auth-provider";
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { setSession } = useAuth();
-  const { login } = useLogin();
+  const { login, isLoading, error } = useLogin();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
-    const success = await login(email, password);
-    if (!success) {
-      setError("Nieprawidłowy e-mail lub hasło");
-      setLoading(false);
-      return;
+    const sessionData = await login(email, password);
+    if (sessionData) {
+      setSession(sessionData);
+      navigate("/dashboard");
     }
-    setSession(success);
-    navigate("/dashboard");
-    setLoading(false);
   };
 
   return (
@@ -79,7 +71,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  disabled={loading}
+                  disabled={isLoading}
                 />
               </div>
 
@@ -92,13 +84,13 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  disabled={loading}
+                  disabled={isLoading}
                 />
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? (
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
                   <>
                     <Lock className="mr-2 h-4 w-4 animate-pulse" />
                     Logowanie...

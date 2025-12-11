@@ -25,7 +25,9 @@ export const useRegister = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const register = async (formData: RegisterFormData): Promise<boolean> => {
+  const register = async (
+    formData: RegisterFormData
+  ): Promise<RegisterResponse | null> => {
     setIsLoading(true);
     setError(null);
 
@@ -42,25 +44,26 @@ export const useRegister = () => {
 
       if (!response.ok) {
         setError(json.message || "Rejestracja nie powiodła się");
-        return false;
+        return null;
       }
 
       const data = json as RegisterResponse;
 
-      localStorage.setItem("token", data.token);
-
-      const userToSave = {
-        ...data.user,
-        id: data.user._id,
+      const sessionData = {
+        ...data,
+        user: {
+          ...data.user,
+          id: data.user._id, // Map _id to id
+        },
       };
 
-      localStorage.setItem("user", JSON.stringify(userToSave));
+      localStorage.setItem("session", JSON.stringify(sessionData));
 
-      return true;
+      return sessionData;
     } catch (err) {
       console.error(err);
       setError("Błąd połączenia z serwerem");
-      return false;
+      return null;
     } finally {
       setIsLoading(false);
     }

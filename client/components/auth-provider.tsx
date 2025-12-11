@@ -17,8 +17,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<null>(null);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const storedSession = localStorage.getItem("session");
+    if (storedSession) {
+      try {
+        setSession(JSON.parse(storedSession));
+      } catch (error) {
+        console.error("Failed to parse session from localStorage", error);
+        localStorage.removeItem("session");
+      }
+    }
+  }, []);
+
   const logout = () => {
     setSession(null);
+    localStorage.removeItem("session");
     navigate("/login");
   };
 

@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FileText, UserPlus } from "lucide-react";
-import { useRegister } from "@/hooks/useRegister"; // Upewnij się co do ścieżki
+import { useAuth } from "@/components/auth-provider"; // Import useAuth
+import { useRegister } from "@/hooks/useRegister";
 
 export default function RegisterPage() {
   // Stan formularza
@@ -23,10 +24,11 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Lokalny błąd walidacji (np. niezgodne hasła)
+  // Lokalny błąd walidacji
   const [validationError, setValidationError] = useState("");
 
   const navigate = useNavigate();
+  const { setSession } = useAuth(); // Pobierz setSession z kontekstu
 
   // Pobieramy stan i funkcję z hooka
   const { register, isLoading, error: apiError } = useRegister();
@@ -35,33 +37,30 @@ export default function RegisterPage() {
     e.preventDefault();
     setValidationError("");
 
-    // Walidacja haseł
     if (password !== confirmPassword) {
       setValidationError("Hasła nie są zgodne");
       return;
     }
 
-    // Logika rozdzielania Imienia i Nazwiska
     const nameParts = fullName.trim().split(" ");
     const firstName = nameParts[0];
     const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
 
-    // Wywołanie rejestracji
-    const success = await register({
+    const sessionData = await register({
       name: firstName,
-      lastName: lastName, // Backend tego wymaga
+      lastName: lastName,
       email,
       password,
       confirmPassword,
     });
 
-    if (success) {
-      // Przekierowanie po sukcesie (np. do dashboardu lub strony głównej)
-      navigate("/");
+    if (sessionData) {
+      setSession(sessionData); // Ustaw sesję w stanie globalnym
+      navigate("/dashboard"); // Przekieruj do dashboardu
     }
   };
 
-  // Wybieramy błąd do wyświetlenia (lokalny albo z API)
+  // Wybieramy błąd do wyświetlenia
   const displayError = validationError || apiError;
 
   return (

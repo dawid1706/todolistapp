@@ -5,12 +5,15 @@ import {
   createInvoice,
   deleteInvoice,
   updateInvoice,
+  getDownloadUrl,
+  upload,
 } from "../controllers/invoiceController.js";
 
 const router = express.Router();
 
 router.get("/", authGuard, getInvoices);
-router.post("/create", authGuard, createInvoice);
+router.get("/:id/download", authGuard, getDownloadUrl);
+router.post("/create", authGuard, upload.single("file"), createInvoice);
 router.delete("/:id", authGuard, deleteInvoice);
 router.put("/:id", authGuard, updateInvoice);
 
