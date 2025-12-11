@@ -25,17 +25,19 @@ const getAuthToken = (): string | null => {
 };
 
 const mapBackendToFrontend = (invoice: any): Invoice => ({
-  id: invoice._id,
-  userId: invoice.user,
-  invoiceNumber: invoice.invoiceNumber,
-  amount: invoice.amount,
-  contractor: invoice.contractor,
-  issueDate: new Date(invoice.issueDate).toISOString().split("T")[0],
-  dueDate: new Date(invoice.dueDate).toISOString().split("T")[0],
-  status: invoice.status,
-  filePath: invoice.filePath,
-  createdAt: invoice.createdAt,
-  updatedAt: invoice.updatedAt,
+  id: invoice?._id,
+  userId: invoice?.user,
+  invoiceNumber: invoice?.invoiceNumber,
+  amount: invoice?.amount,
+  contractor: invoice?.contractor,
+  issueDate: new Date(invoice?.issueDate || new Date())
+    .toISOString()
+    .split("T")[0],
+  dueDate: new Date(invoice?.dueDate || new Date()).toISOString().split("T")[0],
+  status: invoice?.status,
+  filePath: invoice?.filePath,
+  createdAt: invoice?.createdAt,
+  updatedAt: invoice?.updatedAt,
 });
 
 export async function getInvoices(userId: string): Promise<Invoice[]> {
