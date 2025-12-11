@@ -2,18 +2,9 @@ import InvoiceModel from "../models/invoiceModel.js";
 import { Storage } from "@google-cloud/storage";
 import multer from "multer";
 
-// --- Konfiguracja Google Cloud Storage ---
-// WAŻNE: Upewnij się, że następujące zmienne środowiskowe są ustawione w pliku .env:
-// GCS_PROJECT_ID: ID Twojego projektu Google Cloud
-// GCS_KEY_FILE: Ścieżka do Twojego pliku klucza GCS (np. ./gcs-key.json)
-// GCS_BUCKET_NAME: Nazwa Twojego bucketu GCS
-const storage = new Storage({
-  projectId: process.env.GCS_PROJECT_ID,
-  keyFilename: process.env.GCS_KEY_FILE,
-});
-const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
-// --- Koniec konfiguracji GCS ---
+const storage = new Storage();
 
+const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
 
 // --- Konfiguracja Multer ---
 // Przechowuje plik w pamięci jako bufor
@@ -24,7 +15,6 @@ export const upload = multer({
   },
 });
 // --- Koniec konfiguracji Multer ---
-
 
 export const getInvoices = async (req, res) => {
   try {
@@ -44,7 +34,8 @@ export const getInvoices = async (req, res) => {
 
 export const createInvoice = async (req, res) => {
   const userId = req.user._id;
-  const { invoiceNumber, contractor, amount, status, issueDate, dueDate } = req.body;
+  const { invoiceNumber, contractor, amount, status, issueDate, dueDate } =
+    req.body;
   const invoiceFile = req.file;
 
   let filePath = null;
@@ -52,7 +43,10 @@ export const createInvoice = async (req, res) => {
   try {
     // Jeśli plik został przesłany, wrzuć go na Google Cloud Storage
     if (invoiceFile) {
-      filePath = `invoices/${userId}/${Date.now()}-${invoiceFile.originalname.replace(/ /g, "_")}`;
+      filePath = `invoices/${userId}/${Date.now()}-${invoiceFile.originalname.replace(
+        / /g,
+        "_"
+      )}`;
       const blob = bucket.file(filePath);
       const blobStream = blob.createWriteStream({
         resumable: false,
@@ -86,7 +80,6 @@ export const createInvoice = async (req, res) => {
       status: "success",
       content: newInvoice,
     });
-
   } catch (err) {
     console.error("Błąd podczas tworzenia faktury:", err);
     // Jeśli wystąpił błąd po przesłaniu pliku, usuń plik z GCS
@@ -94,7 +87,10 @@ export const createInvoice = async (req, res) => {
       try {
         await bucket.file(filePath).delete();
       } catch (deleteError) {
-        console.error("Nie udało się usunąć pliku z GCS po błędzie tworzenia faktury:", deleteError);
+        console.error(
+          "Nie udało się usunąć pliku z GCS po błędzie tworzenia faktury:",
+          deleteError
+        );
       }
     }
     res.status(400).json({
@@ -175,8 +171,8 @@ export const getDownloadUrl = async (req, res) => {
     }
 
     const options = {
-      version: 'v4',
-      action: 'read',
+      version: "v4",
+      action: "read",
       expires: Date.now() + 15 * 60 * 1000, // 15 minutes
     };
 
@@ -186,7 +182,6 @@ export const getDownloadUrl = async (req, res) => {
       status: "success",
       url: url,
     });
-
   } catch (err) {
     console.error("Błąd podczas generowania URL pobierania:", err);
     res.status(500).json({
