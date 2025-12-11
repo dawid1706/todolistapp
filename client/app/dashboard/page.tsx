@@ -41,7 +41,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
-import { getInvoices, getInvoiceDownloadUrl, deleteInvoice } from "@/lib/invoices";
+import {
+  getInvoices,
+  getInvoiceDownloadUrl,
+  deleteInvoice,
+} from "@/lib/invoices";
 
 export default function DashboardPage() {
   const navigate = useNavigate();

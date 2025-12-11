@@ -32,13 +32,16 @@ export const useRegister = () => {
     setError(null);
 
     try {
-      const response = await fetch("http://localhost:3001/api/user/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await fetch(
+        "https://todolistapp-371334652902.europe-west1.run.app/api/user/signup",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formData),
+        }
+      );
 
       const json = await response.json();
 

@@ -30,13 +30,16 @@ export const useLogin = () => {
     setError(null);
 
     try {
-      const response = await fetch("http://localhost:3001/api/user/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await fetch(
+        "https://todolistapp-371334652902.europe-west1.run.app/api/user/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
       const json = await response.json();
 

@@ -1,5 +1,6 @@
 // Invoice management library
-const API_BASE_URL = "http://localhost:3001/api/invoices";
+const API_BASE_URL =
+  "https://todolistapp-371334652902.europe-west1.run.app/api/invoices";
 
 export type InvoiceStatus = "PENDING" | "PAID" | "OVERDUE";
 
@@ -19,7 +20,8 @@ export interface Invoice {
 
 const getAuthToken = (): string | null => {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("token");
+  const session = JSON.parse(localStorage.getItem("session") || "null");
+  return session?.token || null;
 };
 
 const mapBackendToFrontend = (invoice: any): Invoice => ({
@@ -38,10 +40,6 @@ const mapBackendToFrontend = (invoice: any): Invoice => ({
 
 export async function getInvoices(userId: string): Promise<Invoice[]> {
   const token = getAuthToken();
-  if (!token) {
-    console.error("No auth token found");
-    return [];
-  }
 
   try {
     const response = await fetch(API_BASE_URL, {
@@ -187,7 +185,9 @@ export async function getInvoiceById(
   return invoices.find((inv) => inv.id === invoiceId) || null;
 }
 
-export async function getInvoiceDownloadUrl(invoiceId: string): Promise<string | null> {
+export async function getInvoiceDownloadUrl(
+  invoiceId: string
+): Promise<string | null> {
   const token = getAuthToken();
   if (!token) {
     console.error("No auth token found");
