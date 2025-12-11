@@ -1,21 +1,18 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/components/auth-provider";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/components/auth-provider";
 
 export default function Home() {
-  const { session, loading } = useAuth();
   const navigate = useNavigate();
-
+  const { session } = useAuth();
   useEffect(() => {
-    if (!loading) {
-      if (session) {
-        navigate("/dashboard");
-      } else {
-        navigate("/login");
-      }
+    if (session) {
+      navigate("/dashboard");
+    } else {
+      navigate("/login");
     }
-  }, [session, loading, navigate]);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">

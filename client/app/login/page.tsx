@@ -14,9 +14,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { login } from "@/lib/auth";
-import { useAuth } from "@/components/auth-provider";
 import { FileText, Lock } from "lucide-react";
+import { useLogin } from "@/hooks/useLogin";
+import { useAuth } from "@/components/auth-provider";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -24,22 +24,21 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { refreshSession } = useAuth();
+  const { setSession } = useAuth();
+  const { login } = useLogin();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
-    const result = await login(email, password);
-
-    if (result.success) {
-      refreshSession();
-      navigate("/dashboard");
-    } else {
-      setError(result.error || "Wystąpił błąd podczas logowania");
+    const success = await login(email, password);
+    if (!success) {
+      setError("Nieprawidłowy e-mail lub hasło");
+      setLoading(false);
+      return;
     }
-
+    setSession(success);
+    navigate("/dashboard");
     setLoading(false);
   };
 

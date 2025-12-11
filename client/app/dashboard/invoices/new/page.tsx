@@ -1,7 +1,6 @@
 import type React from "react";
 
 import { useState } from "react";
-import { useAuth } from "@/components/auth-provider";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +18,6 @@ import { ArrowLeft, Upload, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function NewInvoicePage() {
-  const { session } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -53,63 +51,63 @@ export default function NewInvoicePage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
 
-    console.log("[v0] Form submitted");
-    console.log("[v0] Session:", session);
-    console.log("[v0] Form data:", formData);
-    console.log("[v0] File:", file);
+  //   console.log("[v0] Form submitted");
+  //   console.log("[v0] Session:", session);
+  //   console.log("[v0] Form data:", formData);
+  //   console.log("[v0] File:", file);
 
-    if (!session) {
-      console.log("[v0] No session, redirecting to login");
-      navigate("/login");
-      return;
-    }
+  //   if (!session) {
+  //     console.log("[v0] No session, redirecting to login");
+  //     navigate("/login");
+  //     return;
+  //   }
 
-    if (
-      !formData.invoiceNumber ||
-      !formData.contractor ||
-      !formData.amount ||
-      !formData.issueDate ||
-      !formData.dueDate
-    ) {
-      setError("Wszystkie pola są wymagane");
-      return;
-    }
+  //   if (
+  //     !formData.invoiceNumber ||
+  //     !formData.contractor ||
+  //     !formData.amount ||
+  //     !formData.issueDate ||
+  //     !formData.dueDate
+  //   ) {
+  //     setError("Wszystkie pola są wymagane");
+  //     return;
+  //   }
 
-    setError("");
-    setLoading(true);
+  //   setError("");
+  //   setLoading(true);
 
-    try {
-      console.log("[v0] Calling createInvoice...");
-      const result = await createInvoice(session.user.id, {
-        invoiceNumber: formData.invoiceNumber,
-        amount: Number.parseFloat(formData.amount),
-        contractor: formData.contractor,
-        issueDate: formData.issueDate,
-        dueDate: formData.dueDate,
-        file: file || undefined,
-      });
+  //   try {
+  //     console.log("[v0] Calling createInvoice...");
+  //     const result = await createInvoice(session.user.id, {
+  //       invoiceNumber: formData.invoiceNumber,
+  //       amount: Number.parseFloat(formData.amount),
+  //       contractor: formData.contractor,
+  //       issueDate: formData.issueDate,
+  //       dueDate: formData.dueDate,
+  //       file: file || undefined,
+  //     });
 
-      console.log("[v0] createInvoice result:", result);
+  //     console.log("[v0] createInvoice result:", result);
 
-      if (result.success) {
-        toast({
-          title: "Faktura utworzona",
-          description: "Faktura została pomyślnie dodana",
-        });
-        navigate("/dashboard");
-      } else {
-        setError(result.error || "Wystąpił błąd podczas tworzenia faktury");
-      }
-    } catch (error) {
-      console.log("[v0] Exception in handleSubmit:", error);
-      setError("Wystąpił nieoczekiwany błąd");
-    } finally {
-      setLoading(false);
-    }
-  };
+  //     if (result.success) {
+  //       toast({
+  //         title: "Faktura utworzona",
+  //         description: "Faktura została pomyślnie dodana",
+  //       });
+  //       navigate("/dashboard");
+  //     } else {
+  //       setError(result.error || "Wystąpił błąd podczas tworzenia faktury");
+  //     }
+  //   } catch (error) {
+  //     console.log("[v0] Exception in handleSubmit:", error);
+  //     setError("Wystąpił nieoczekiwany błąd");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   return (
     <div className="min-h-screen bg-background">
@@ -133,7 +131,7 @@ export default function NewInvoicePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={() => false} className="space-y-6">
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>

@@ -5,6 +5,10 @@ const invoiceSchema = new mongoose.Schema({
     type: String,
     required: [true, "nameRequired"],
   },
+  amount: {
+    type: Number,
+    required: [true, "amountRequired"],
+  },
   state: {
     type: String,
     default: "active",
@@ -17,7 +21,7 @@ const invoiceSchema = new mongoose.Schema({
   endsAt: {
     type: Date,
   },
-  fileId: {
+  filePath: {
     type: String,
     required: [true, "fileIdRequired"],
   },

@@ -1,7 +1,6 @@
 import type React from "react";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@/components/auth-provider";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +29,6 @@ import { ArrowLeft, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function EditInvoicePage() {
-  const { session } = useAuth();
   const navigate = useNavigate();
   const params = useParams<{ id: string }>();
   const { toast } = useToast();
@@ -46,56 +44,56 @@ export default function EditInvoicePage() {
     status: "PENDING" as InvoiceStatus,
   });
 
-  useEffect(() => {
-    if (session && params.id) {
-      const invoice = getInvoiceById(session.user.id, params.id);
-      if (invoice) {
-        setFormData({
-          invoiceNumber: invoice.invoiceNumber,
-          amount: invoice.amount.toString(),
-          contractor: invoice.contractor,
-          issueDate: invoice.issueDate,
-          dueDate: invoice.dueDate,
-          status: invoice.status,
-        });
-      } else {
-        setError("Faktura nie została znaleziona");
-      }
-    }
-  }, [session, params.id]);
+  // useEffect(() => {
+  //   if (session && params.id) {
+  //     const invoice = getInvoiceById(session.user.id, params.id);
+  //     if (invoice) {
+  //       setFormData({
+  //         invoiceNumber: invoice.invoiceNumber,
+  //         amount: invoice.amount.toString(),
+  //         contractor: invoice.contractor,
+  //         issueDate: invoice.issueDate,
+  //         dueDate: invoice.dueDate,
+  //         status: invoice.status,
+  //       });
+  //     } else {
+  //       setError("Faktura nie została znaleziona");
+  //     }
+  //   }
+  // }, [session, params.id]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
 
-    if (!session || !params.id) {
-      navigate("/login");
-      return;
-    }
+  //   if (!session || !params.id) {
+  //     navigate("/login");
+  //     return;
+  //   }
 
-    setError("");
-    setLoading(true);
+  //   setError("");
+  //   setLoading(true);
 
-    const result = await updateInvoice(session.user.id, params.id, {
-      invoiceNumber: formData.invoiceNumber,
-      amount: Number.parseFloat(formData.amount),
-      contractor: formData.contractor,
-      issueDate: formData.issueDate,
-      dueDate: formData.dueDate,
-      status: formData.status,
-    });
+  //   const result = await updateInvoice(session.user.id, params.id, {
+  //     invoiceNumber: formData.invoiceNumber,
+  //     amount: Number.parseFloat(formData.amount),
+  //     contractor: formData.contractor,
+  //     issueDate: formData.issueDate,
+  //     dueDate: formData.dueDate,
+  //     status: formData.status,
+  //   });
 
-    if (result.success) {
-      toast({
-        title: "Faktura zaktualizowana",
-        description: "Zmiany zostały pomyślnie zapisane",
-      });
-      navigate("/dashboard");
-    } else {
-      setError(result.error || "Wystąpił błąd podczas aktualizacji faktury");
-    }
+  //   if (result.success) {
+  //     toast({
+  //       title: "Faktura zaktualizowana",
+  //       description: "Zmiany zostały pomyślnie zapisane",
+  //     });
+  //     navigate("/dashboard");
+  //   } else {
+  //     setError(result.error || "Wystąpił błąd podczas aktualizacji faktury");
+  //   }
 
-    setLoading(false);
-  };
+  //   setLoading(false);
+  // };
 
   return (
     <div className="min-h-screen bg-background">
@@ -117,7 +115,7 @@ export default function EditInvoicePage() {
             <CardDescription>Zaktualizuj dane faktury</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={() => false} className="space-y-6">
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
