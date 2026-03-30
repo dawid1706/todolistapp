@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "@/components/auth-provider";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,12 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  getInvoices,
-  type Invoice,
-  type InvoiceStatus,
-  deleteInvoice,
-} from "@/lib/invoices";
+import { type Invoice, type InvoiceStatus } from "@/lib/invoices";
 import {
   FileText,
   Plus,
@@ -46,33 +40,31 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical } from "lucide-react";
+import { useAuth } from "@/components/auth-provider";
+import {
+  getInvoices,
+  getInvoiceDownloadUrl,
+  deleteInvoice,
+} from "@/lib/invoices";
 
 export default function DashboardPage() {
-  const { session, loading, logout } = useAuth();
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
   const { toast } = useToast();
+  const { session, logout } = useAuth();
 
   useEffect(() => {
-    if (!loading && !session) {
-      navigate("/login");
-    }
-  }, [session, loading, navigate]);
+    const fetchInvoices = async () => {
+      if (session?.user?.id) {
+        const fetchedInvoices = await getInvoices(session.user.id);
+        setInvoices(fetchedInvoices);
+      }
+    };
 
-  useEffect(() => {
-    if (session) {
-      loadInvoices();
-    }
+    fetchInvoices();
   }, [session]);
-
-  const loadInvoices = () => {
-    if (session) {
-      const userInvoices = getInvoices(session.user.id);
-      setInvoices(userInvoices);
-    }
-  };
 
   const handleDeleteClick = (invoiceId: string) => {
     setInvoiceToDelete(invoiceId);
@@ -80,14 +72,16 @@ export default function DashboardPage() {
   };
 
   const handleDeleteConfirm = async () => {
-    if (invoiceToDelete && session) {
+    if (invoiceToDelete && session?.user?.id) {
       const result = await deleteInvoice(session.user.id, invoiceToDelete);
       if (result.success) {
+        setInvoices((prevInvoices) =>
+          prevInvoices.filter((invoice) => invoice.id !== invoiceToDelete)
+        );
         toast({
           title: "Faktura usunięta",
           description: "Faktura została pomyślnie usunięta",
         });
-        loadInvoices();
       } else {
         toast({
           title: "Błąd",
@@ -100,24 +94,22 @@ export default function DashboardPage() {
     setInvoiceToDelete(null);
   };
 
-  const handleDownload = (invoice: Invoice) => {
-    if (invoice.fileData) {
-      const link = document.createElement("a");
-      link.href = invoice.fileData;
-      link.download =
-        invoice.fileName || `faktura_${invoice.invoiceNumber}.pdf`;
-      link.click();
-
+  const handleDownload = async (invoiceId: string) => {
+    const url = await getInvoiceDownloadUrl(invoiceId);
+    if (url) {
+      window.open(url, "_blank");
       toast({
         title: "Pobieranie pliku",
-        description: "Faktura została pobrana",
+        description: "Pobieranie pliku powinno się rozpocząć w nowej karcie.",
+      });
+    } else {
+      toast({
+        title: "Błąd pobierania",
+        description: "Nie udało się pobrać adresu URL do pobrania pliku.",
+        variant: "destructive",
       });
     }
   };
-
-  if (loading || !session) {
-    return null;
-  }
 
   const stats = {
     total: invoices.length,
@@ -168,17 +160,11 @@ export default function DashboardPage() {
               <div>
                 <h1 className="text-xl font-bold">Invoice Manager</h1>
                 <p className="text-sm text-muted-foreground">
-                  Witaj, {session.user.name}
+                  Witaj, {session?.user?.name} {session?.user?.lastName}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/dashboard/notifications">
-                  <Bell className="h-4 w-4 mr-2" />
-                  Powiadomienia
-                </Link>
-              </Button>
               <Button variant="outline" size="sm" onClick={logout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Wyloguj
@@ -311,11 +297,11 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-4">
-                      {invoice.fileData && (
+                      {invoice.filePath && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDownload(invoice)}
+                          onClick={() => handleDownload(invoice.id)}
                         >
                           <Download className="h-4 w-4" />
                         </Button>

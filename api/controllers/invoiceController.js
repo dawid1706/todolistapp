@@ -1,15 +1,32 @@
 import InvoiceModel from "../models/invoiceModel.js";
+import { Storage } from "@google-cloud/storage";
+import multer from "multer";
+import { sendNotificationsEmail } from "../utils/email.js";
+
+const storage = new Storage();
+
+const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
+
+// --- Konfiguracja Multer ---
+// Przechowuje plik w pamięci jako bufor
+export const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // limit rozmiaru pliku 10MB
+  },
+});
+// --- Koniec konfiguracji Multer ---
 
 export const getInvoices = async (req, res) => {
   try {
     const invoices = await InvoiceModel.find({ owner: req.user._id });
-
     res.status(200).json({
       status: "success",
+      results: invoices.length,
       content: invoices,
     });
   } catch (err) {
-    res.status(400).json({
+    res.status(500).json({
       status: "fail",
       message: err.message,
     });
@@ -17,37 +34,104 @@ export const getInvoices = async (req, res) => {
 };
 
 export const createInvoice = async (req, res) => {
+  const userId = req.user._id;
+  const { invoiceNumber, contractor, amount, status, issueDate, dueDate } =
+    req.body;
+  const invoiceFile = req.file;
+
+  let filePath = null;
+
   try {
-    const newInvoice = await InvoiceModel.create(req.body);
+    // Jeśli plik został przesłany, wrzuć go na Google Cloud Storage
+    if (invoiceFile) {
+      filePath = `invoices/${userId}/${Date.now()}-${invoiceFile.originalname.replace(
+        / /g,
+        "_"
+      )}`;
+      const blob = bucket.file(filePath);
+      const blobStream = blob.createWriteStream({
+        resumable: false,
+        contentType: invoiceFile.mimetype,
+      });
+
+      await new Promise((resolve, reject) => {
+        blobStream.on("error", (err) => {
+          reject(err);
+        });
+        blobStream.on("finish", () => {
+          resolve();
+        });
+        blobStream.end(invoiceFile.buffer);
+      });
+    }
+
+    // Utwórz wpis faktury w bazie danych
+    const newInvoice = await InvoiceModel.create({
+      invoiceNumber,
+      contractor,
+      amount: Number(amount),
+      status,
+      issueDate,
+      dueDate,
+      owner: userId,
+      filePath: filePath, // Zapisz ścieżkę pliku GCS
+    });
+
     res.status(201).json({
       status: "success",
       content: newInvoice,
     });
   } catch (err) {
+    console.error("Błąd podczas tworzenia faktury:", err);
+    // Jeśli wystąpił błąd po przesłaniu pliku, usuń plik z GCS
+    if (filePath) {
+      try {
+        await bucket.file(filePath).delete();
+      } catch (deleteError) {
+        console.error(
+          "Nie udało się usunąć pliku z GCS po błędzie tworzenia faktury:",
+          deleteError
+        );
+      }
+    }
     res.status(400).json({
       status: "fail",
-      message: err.message,
+      message: "Nie udało się utworzyć faktury.",
     });
   }
 };
 
-export const deleteInvoide = async (req, res) => {
+export const deleteInvoice = async (req, res) => {
   try {
     const invoice = await InvoiceModel.findById(req.params.id);
+
     if (!invoice) {
       return res.status(404).json({
         status: "fail",
-        message: "Invoice not found",
+        message: "Faktura nie znaleziona",
       });
     }
 
     if (invoice.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         status: "fail",
-        message: "You are not authorized to delete this invoice",
+        message: "Brak uprawnień do usunięcia tej faktury",
       });
     }
 
+    // Jeśli istnieje ścieżka do pliku, usuń plik z GCS
+    if (invoice.filePath) {
+      try {
+        await bucket.file(invoice.filePath).delete();
+      } catch (gcsError) {
+        console.warn(
+          `Plik ${invoice.filePath} nie istniał w GCS lub błąd usuwania:`,
+          gcsError.message
+        );
+      }
+    }
+
+    // Usuń fakturę z bazy danych
     await InvoiceModel.findByIdAndDelete(req.params.id);
 
     res.status(204).json({
@@ -62,25 +146,71 @@ export const deleteInvoide = async (req, res) => {
   }
 };
 
-export const updateInvoice = async (req, res) => {
+export const getDownloadUrl = async (req, res) => {
   try {
-    const invoiceTemp = await InvoiceModel.findById(req.params.id);
+    const invoice = await InvoiceModel.findById(req.params.id);
 
-    if (!invoiceTemp) {
+    if (!invoice) {
       return res.status(404).json({
         status: "fail",
-        message: "Invoice not found",
+        message: "Faktura nie znaleziona",
       });
     }
 
-    if (invoice.owner !== req.user._id) {
+    if (invoice.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         status: "fail",
-        message: "You are not authorized to update this invoice",
+        message: "Brak uprawnień do tej faktury",
       });
     }
 
-    const invoice = await InvoiceModel.findByIdAndUpdate(
+    if (!invoice.filePath) {
+      return res.status(404).json({
+        status: "fail",
+        message: "Dla tej faktury nie ma zapisanego pliku.",
+      });
+    }
+
+    const options = {
+      version: "v4",
+      action: "read",
+      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+    };
+
+    const [url] = await bucket.file(invoice.filePath).getSignedUrl(options);
+
+    res.status(200).json({
+      status: "success",
+      url: url,
+    });
+  } catch (err) {
+    console.error("Błąd podczas generowania URL pobierania:", err);
+    res.status(500).json({
+      status: "fail",
+      message: "Nie udało się wygenerować adresu URL do pobrania pliku.",
+    });
+  }
+};
+
+export const updateInvoice = async (req, res) => {
+  try {
+    const invoice = await InvoiceModel.findById(req.params.id);
+
+    if (!invoice) {
+      return res.status(404).json({
+        status: "fail",
+        message: "Faktura nie znaleziona",
+      });
+    }
+
+    if (invoice.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        status: "fail",
+        message: "Brak uprawnień do edycji tej faktury",
+      });
+    }
+
+    const updatedInvoice = await InvoiceModel.findByIdAndUpdate(
       req.params.id,
       req.body,
       {
@@ -91,7 +221,7 @@ export const updateInvoice = async (req, res) => {
 
     res.status(200).json({
       status: "success",
-      content: invoice,
+      content: updatedInvoice,
     });
   } catch (err) {
     res.status(400).json({
@@ -99,4 +229,44 @@ export const updateInvoice = async (req, res) => {
       message: err.message,
     });
   }
+};
+export const sendNotifications = async (req, res) => {
+  const invoices = await InvoiceModel.find({
+    dueDate: { $lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
+    status: "PENDING",
+  }).populate("owner");
+
+  const groupedInvoices = invoices.reduce((acc, invoice) => {
+    if (!invoice.owner) {
+      console.warn(
+        `Faktura ${invoice.invoiceNumber} nie ma przypisanego właściciela.`
+      );
+      return acc;
+    }
+
+    const ownerId = invoice.owner._id.toString();
+    if (!acc[ownerId]) {
+      acc[ownerId] = {
+        user: {
+          id: invoice.owner._id,
+          name: invoice.owner.name,
+          email: invoice.owner.email,
+        },
+        invoices: [],
+      };
+    }
+    acc[ownerId].invoices.push(invoice);
+    return acc;
+  }, {});
+
+  for (const ownerId in groupedInvoices) {
+    const { user, invoices } = groupedInvoices[ownerId];
+    const invoiceNumbers = invoices.map((inv) => inv.invoiceNumber).join(", ");
+    sendNotificationsEmail(user.email, invoiceNumbers);
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Notifications sent (simulated).",
+  });
 };

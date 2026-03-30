@@ -1,7 +1,6 @@
 import type React from "react";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@/components/auth-provider";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,12 +28,14 @@ import {
 import { ArrowLeft, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+import { useAuth } from "@/components/auth-provider";
+
 export default function EditInvoicePage() {
-  const { session } = useAuth();
   const navigate = useNavigate();
   const params = useParams<{ id: string }>();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const { session } = useAuth();
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
@@ -47,21 +48,26 @@ export default function EditInvoicePage() {
   });
 
   useEffect(() => {
-    if (session && params.id) {
-      const invoice = getInvoiceById(session.user.id, params.id);
-      if (invoice) {
-        setFormData({
-          invoiceNumber: invoice.invoiceNumber,
-          amount: invoice.amount.toString(),
-          contractor: invoice.contractor,
-          issueDate: invoice.issueDate,
-          dueDate: invoice.dueDate,
-          status: invoice.status,
-        });
-      } else {
-        setError("Faktura nie została znaleziona");
+    const fetchInvoice = async () => {
+      if (session && params.id) {
+        setLoading(true);
+        const invoice = await getInvoiceById(session.user.id, params.id);
+        if (invoice) {
+          setFormData({
+            invoiceNumber: invoice.invoiceNumber,
+            amount: invoice.amount.toString(),
+            contractor: invoice.contractor,
+            issueDate: invoice.issueDate,
+            dueDate: invoice.dueDate,
+            status: invoice.status,
+          });
+        } else {
+          setError("Faktura nie została znaleziona");
+        }
+        setLoading(false);
       }
-    }
+    };
+    fetchInvoice();
   }, [session, params.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {

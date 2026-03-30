@@ -3,45 +3,40 @@
 import type React from "react";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import {
-  type AuthToken,
-  getCurrentSession,
-  logout as authLogout,
-} from "@/lib/auth";
 import { useNavigate } from "react-router-dom";
 
 interface AuthContextType {
-  session: AuthToken | null;
-  loading: boolean;
+  session: any;
   logout: () => void;
-  refreshSession: () => void;
+  setSession: React.Dispatch<React.SetStateAction<any>>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<AuthToken | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState<null>(null);
   const navigate = useNavigate();
 
-  const refreshSession = () => {
-    const currentSession = getCurrentSession();
-    setSession(currentSession);
-  };
-
   useEffect(() => {
-    refreshSession();
-    setLoading(false);
+    const storedSession = localStorage.getItem("session");
+    if (storedSession) {
+      try {
+        setSession(JSON.parse(storedSession));
+      } catch (error) {
+        console.error("Failed to parse session from localStorage", error);
+        localStorage.removeItem("session");
+      }
+    }
   }, []);
 
   const logout = () => {
-    authLogout();
     setSession(null);
+    localStorage.removeItem("session");
     navigate("/login");
   };
 
   return (
-    <AuthContext.Provider value={{ session, loading, logout, refreshSession }}>
+    <AuthContext.Provider value={{ session, logout, setSession }}>
       {children}
     </AuthContext.Provider>
   );

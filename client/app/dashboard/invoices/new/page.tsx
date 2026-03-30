@@ -1,7 +1,5 @@
 import type React from "react";
-
 import { useState } from "react";
-import { useAuth } from "@/components/auth-provider";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,11 +15,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createInvoice } from "@/lib/invoices";
 import { ArrowLeft, Upload, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/components/auth-provider";
 
 export default function NewInvoicePage() {
-  const { session } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { session } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -42,8 +41,7 @@ export default function NewInvoicePage() {
         setFile(null);
         return;
       }
-      if (selectedFile.size > 10 * 1024 * 1024) {
-        // 10MB limit
+      if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
         setError("Plik jest zbyt duży (maksymalnie 10MB)");
         setFile(null);
         return;
@@ -56,13 +54,7 @@ export default function NewInvoicePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log("[v0] Form submitted");
-    console.log("[v0] Session:", session);
-    console.log("[v0] Form data:", formData);
-    console.log("[v0] File:", file);
-
     if (!session) {
-      console.log("[v0] No session, redirecting to login");
       navigate("/login");
       return;
     }
@@ -82,7 +74,6 @@ export default function NewInvoicePage() {
     setLoading(true);
 
     try {
-      console.log("[v0] Calling createInvoice...");
       const result = await createInvoice(session.user.id, {
         invoiceNumber: formData.invoiceNumber,
         amount: Number.parseFloat(formData.amount),
@@ -91,8 +82,6 @@ export default function NewInvoicePage() {
         dueDate: formData.dueDate,
         file: file || undefined,
       });
-
-      console.log("[v0] createInvoice result:", result);
 
       if (result.success) {
         toast({
@@ -104,7 +93,6 @@ export default function NewInvoicePage() {
         setError(result.error || "Wystąpił błąd podczas tworzenia faktury");
       }
     } catch (error) {
-      console.log("[v0] Exception in handleSubmit:", error);
       setError("Wystąpił nieoczekiwany błąd");
     } finally {
       setLoading(false);
@@ -221,6 +209,7 @@ export default function NewInvoicePage() {
                   <Input
                     id="file"
                     type="file"
+                    name="file"
                     accept=".pdf"
                     onChange={handleFileChange}
                     disabled={loading}

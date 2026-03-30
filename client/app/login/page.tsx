@@ -14,33 +14,24 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { login } from "@/lib/auth";
-import { useAuth } from "@/components/auth-provider";
 import { FileText, Lock } from "lucide-react";
+import { useLogin } from "@/hooks/useLogin";
+import { useAuth } from "@/components/auth-provider";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { refreshSession } = useAuth();
+  const { setSession } = useAuth();
+  const { login, isLoading, error } = useLogin();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    const result = await login(email, password);
-
-    if (result.success) {
-      refreshSession();
+    const sessionData = await login(email, password);
+    if (sessionData) {
+      setSession(sessionData);
       navigate("/dashboard");
-    } else {
-      setError(result.error || "Wystąpił błąd podczas logowania");
     }
-
-    setLoading(false);
   };
 
   return (
@@ -80,7 +71,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  disabled={loading}
+                  disabled={isLoading}
                 />
               </div>
 
@@ -93,13 +84,13 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  disabled={loading}
+                  disabled={isLoading}
                 />
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? (
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
                   <>
                     <Lock className="mr-2 h-4 w-4 animate-pulse" />
                     Logowanie...

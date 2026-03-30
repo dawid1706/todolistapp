@@ -1,33 +1,48 @@
 import mongoose from "mongoose";
 
 const invoiceSchema = new mongoose.Schema({
-  name: {
+  invoiceNumber: {
     type: String,
-    required: [true, "nameRequired"],
+    required: [true, "invoiceNumberRequired"],
   },
-  state: {
+  contractor: {
     type: String,
-    default: "active",
-    required: [true, "stateRequired"],
+    required: [true, "contractorRequired"],
   },
-  createdAt: {
+  amount: {
+    type: Number,
+    required: [true, "amountRequired"],
+  },
+  status: {
+    type: String,
+    enum: ["PENDING", "PAID", "OVERDUE"],
+    default: "PENDING",
+    required: [true, "statusRequired"],
+  },
+  issueDate: {
     type: Date,
-    default: Date.now,
+    required: [true, "issueDateRequired"],
   },
-  endsAt: {
+  dueDate: {
     type: Date,
-  },
-  fileId: {
-    type: String,
-    required: [true, "fileIdRequired"],
+    required: [true, "dueDateRequired"],
   },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: [true, "ownerRequired"],
   },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  filePath: {
+    type: String,
+    required: false,
+  },
 });
 
 const InvoiceModel = mongoose.model("Invoice", invoiceSchema);
 
 export default InvoiceModel;
+

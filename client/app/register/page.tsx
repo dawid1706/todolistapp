@@ -1,5 +1,4 @@
 import type React from "react";
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -14,42 +13,55 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { register } from "@/lib/auth";
-import { useAuth } from "@/components/auth-provider";
 import { FileText, UserPlus } from "lucide-react";
+import { useAuth } from "@/components/auth-provider"; // Import useAuth
+import { useRegister } from "@/hooks/useRegister";
 
 export default function RegisterPage() {
-  const [name, setName] = useState("");
+  // Stan formularza
+  const [fullName, setFullName] = useState(""); // Jedno pole dla usera
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+
+  // Lokalny błąd walidacji
+  const [validationError, setValidationError] = useState("");
+
   const navigate = useNavigate();
-  const { refreshSession } = useAuth();
+  const { setSession } = useAuth(); // Pobierz setSession z kontekstu
+
+  // Pobieramy stan i funkcję z hooka
+  const { register, isLoading, error: apiError } = useRegister();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setValidationError("");
 
     if (password !== confirmPassword) {
-      setError("Hasła nie są zgodne");
+      setValidationError("Hasła nie są zgodne");
       return;
     }
 
-    setLoading(true);
+    const nameParts = fullName.trim().split(" ");
+    const firstName = nameParts[0];
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
 
-    const result = await register(email, password, name);
+    const sessionData = await register({
+      name: firstName,
+      lastName: lastName,
+      email,
+      password,
+      confirmPassword,
+    });
 
-    if (result.success) {
-      refreshSession();
-      navigate("/dashboard");
-    } else {
-      setError(result.error || "Wystąpił błąd podczas rejestracji");
+    if (sessionData) {
+      setSession(sessionData); // Ustaw sesję w stanie globalnym
+      navigate("/dashboard"); // Przekieruj do dashboardu
     }
-
-    setLoading(false);
   };
+
+  // Wybieramy błąd do wyświetlenia
+  const displayError = validationError || apiError;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
@@ -73,9 +85,9 @@ export default function RegisterPage() {
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
-              {error && (
+              {displayError && (
                 <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription>{displayError}</AlertDescription>
                 </Alert>
               )}
 
@@ -85,10 +97,10 @@ export default function RegisterPage() {
                   id="name"
                   type="text"
                   placeholder="Jan Kowalski"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                   required
-                  disabled={loading}
+                  disabled={isLoading}
                 />
               </div>
 
@@ -101,7 +113,7 @@ export default function RegisterPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  disabled={loading}
+                  disabled={isLoading}
                 />
               </div>
 
@@ -114,11 +126,9 @@ export default function RegisterPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  disabled={loading}
+                  disabled={isLoading}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Min. 8 znaków, wielka litera i cyfra
-                </p>
+                <p className="text-xs text-muted-foreground">Min. 8 znaków</p>
               </div>
 
               <div className="space-y-2">
@@ -130,13 +140,13 @@ export default function RegisterPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  disabled={loading}
+                  disabled={isLoading}
                 />
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? (
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
                   <>
                     <UserPlus className="mr-2 h-4 w-4 animate-pulse" />
                     Tworzenie konta...
